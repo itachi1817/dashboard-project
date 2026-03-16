@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Custom Dashboard Builder</title>
+<link rel="stylesheet" href="halleyx.css">
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- Action Button -->
+  <div style="margin-bottom:15px;">
+    <button onclick="openOrderForm()">Create Order</button>
+  </div>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-left">
+      <div class="icon">▦</div>
+      <div>
+        <h2>Custom Dashboard Builder</h2>
+        <p>Create personalized dashboards with drag-and-drop widgets</p>
+      </div>
+    </div>
+    <button class="config-btn" onclick="openConfig()">⚙ Configure Dashboard</button>
+  </div>
+
+  <!-- Dashboard Container -->
+  <div class="dashboard-container">
+
+    <!-- Table Widget -->
+    <div class="widget table-widget" draggable="true">
+      <h2>Orders Table</h2>
+      <button class="delete-widget-btn" onclick="deleteWidget(this)">Delete Widget</button>
+      <div class="table-wrapper">
+        <table border="1">
+          <thead>
+            <tr>
+              <th>S.No</th>
+              <th>Name</th>
+              <th>Product</th>
+              <th>Quantity</th>
+              <th>Unit Price</th>
+              <th>Total Amount</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<!-- ORDER FORM POPUP -->
+<div id="orderForm" class="popup">
+  <h2>Create Order</h2>
+  <input id="firstName" placeholder="First Name">
+  <input id="lastName" placeholder="Last Name">
+  <select id="product">
+    <option>Fiber Internet 300 Mbps</option>
+    <option>5G Unlimited Mobile Plan</option>
+    <option>Fiber Internet 1 Gbps</option>
+    <option>Business Internet 500 Mbps</option>
+    <option>VoIP Corporate Package</option>
+  </select>
+  <input id="quantity" type="number" value="1" onchange="calculateTotal()">
+  <input id="unitPrice" type="number" placeholder="Unit Price" onchange="calculateTotal()">
+  <input id="totalAmount" placeholder="Total Amount" readonly>
+  <br><br>
+  <button type="button" class="submit-btn" onclick="submitOrder()">Submit</button>
+  <button type="button" onclick="closeOrderForm()">Close</button>
+</div>
+
+<!-- CONFIG PANEL POPUP -->
+<div id="configPanel">
+  <h2>Configure Dashboard</h2>
+  <div>
+    <h3>Charts</h3>
+    <ul>
+      <li><button onclick="addChart('bar')">Bar Chart</button></li>
+      <li><button onclick="addChart('line')">Line Chart</button></li>
+      <li><button onclick="addChart('pie')">Pie Chart</button></li>
+      <li><button onclick="addChart('scatter')">Scatter Plot</button></li>
+    </ul>
+  </div>
+  <div>
+    <h3>KPIs</h3>
+    <ul>
+      <li><button onclick="addKPI()">KPI Value</button></li>
+    </ul>
+  </div>
+  <button onclick="closeConfigPanel()">Close</button>
+</div>
+
+<script src="halleyx.js"></script>
+</body>
+</html>
