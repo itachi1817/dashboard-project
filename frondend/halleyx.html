@@ -8,7 +8,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-
 <div class="container">
 
   <!-- Action Button -->
@@ -30,9 +29,8 @@
 
   <!-- Dashboard Container -->
   <div class="dashboard-container">
-
     <!-- Table Widget -->
-    <div class="widget table-widget" draggable="true">
+    <div class="widget table-widget" draggable="true" data-widget-type="table">
       <h2>Orders Table</h2>
       <button class="delete-widget-btn" onclick="deleteWidget(this)">Delete Widget</button>
       <div class="table-wrapper">
@@ -50,11 +48,14 @@
           </thead>
           <tbody></tbody>
         </table>
+        <div class="table-pagination"></div>
+      </div>
+      <div class="table-filter">
+        <label>Filter Product: </label>
+        <input type="text" placeholder="Search Product" oninput="applyFilter(this)">
       </div>
     </div>
-
   </div>
-
 </div>
 
 <!-- ORDER FORM POPUP -->
@@ -72,7 +73,8 @@
   <input id="quantity" type="number" value="1" onchange="calculateTotal()">
   <input id="unitPrice" type="number" placeholder="Unit Price" onchange="calculateTotal()">
   <input id="totalAmount" placeholder="Total Amount" readonly>
-  <br><br>
+  <p class="validation-msg" style="color:red; display:none;">Please fill the field</p>
+  <br>
   <button type="button" class="submit-btn" onclick="submitOrder()">Submit</button>
   <button type="button" onclick="closeOrderForm()">Close</button>
 </div>
@@ -86,6 +88,7 @@
       <li><button onclick="addChart('bar')">Bar Chart</button></li>
       <li><button onclick="addChart('line')">Line Chart</button></li>
       <li><button onclick="addChart('pie')">Pie Chart</button></li>
+      <li><button onclick="addChart('area')">Area Chart</button></li>
       <li><button onclick="addChart('scatter')">Scatter Plot</button></li>
     </ul>
   </div>
@@ -95,6 +98,7 @@
       <li><button onclick="addKPI()">KPI Value</button></li>
     </ul>
   </div>
+  <div id="widgetConfigPanel"></div>
   <button onclick="closeConfigPanel()">Close</button>
 </div>
 

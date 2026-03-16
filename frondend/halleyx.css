@@ -5,7 +5,12 @@ body{font-family:Arial, sans-serif; background:#f5f6f8;}
 .header-left{display:flex; align-items:center;}
 .icon{font-size:28px; margin-right:10px;}
 .config-btn{background:#070a1f; color:white; border:none; padding:10px 20px; border-radius:8px; cursor:pointer;}
-.dashboard-container{display:grid; grid-template-columns:repeat(2,1fr); gap:20px; margin-top:30px;}
+.dashboard-container{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr); /* Max 2 widgets per row */
+  gap:20px;
+  margin-top:30px;
+}
 .widget{background:white; padding:25px; border-radius:12px; box-shadow:0 3px 10px rgba(0,0,0,0.1); cursor:move; overflow-x:auto; position:relative;}
 table{width:100%; border-collapse:collapse; margin-top:10px; table-layout: fixed;}
 thead th{background:#070a1f; color:white; padding:10px; text-align:center;}
@@ -15,7 +20,6 @@ button{padding:8px 15px; border:none; background:#070a1f; color:white; border-ra
 button:hover{background:#0a1a3b;}
 .popup{display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:white; padding:25px; border-radius:10px; box-shadow:0 5px 20px rgba(0,0,0,0.3);}
 .popup input, .popup select{width:220px; padding:8px; margin:8px 0; border:1px solid #ccc; border-radius:5px;}
-#salesChart{height:250px;}
 .table-wrapper{overflow-x:auto;}
 #configPanel{display:none; position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); background:#fff; padding:20px; border:1px solid #333; border-radius:10px; z-index:1000; box-shadow:0 5px 20px rgba(0,0,0,0.3);}
 #configPanel h2{margin-bottom:15px;}
@@ -23,22 +27,13 @@ button:hover{background:#0a1a3b;}
 #configPanel ul{list-style:none; padding-left:0; margin-bottom:15px;}
 #configPanel li{margin-bottom:8px;}
 #configPanel button{padding:6px 12px;}
-
-/* Space between Edit and Delete buttons in table */
-.table-widget tbody td button {
-  margin-right: 5px;
-  padding:5px 10px;
-  font-size:0.9em;
-}
-
-/* Delete Widget Button Styling */
-.delete-widget-btn {
-  position: absolute;
-  top: 10px;
-  right: 10px;
-  background:#ff4d4f;
-  padding:5px 10px;
-  font-size:0.9em;
-  border-radius:5px;
-}
+.table-widget tbody td button { margin-right: 5px; padding:5px 10px; font-size:0.9em; }
+.delete-widget-btn { position: absolute; top: 10px; right: 10px; background:#ff4d4f; padding:5px 10px; font-size:0.9em; border-radius:5px; }
 .delete-widget-btn:hover { background:#d9363e; }
+.table-pagination{margin-top:10px;text-align:center;}
+.table-filter{margin-top:10px;}
+
+/* Responsive: tablet & mobile */
+@media(max-width:768px){
+  .dashboard-container{grid-template-columns:1fr;} /* 1 widget per row for tablet/mobile */
+}

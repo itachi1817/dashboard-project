@@ -1,15 +1,21 @@
 const API_URL = "http://localhost:5000/orders";
-let salesCharts = []; 
+let salesCharts = [];
 const dashboardContainer = document.querySelector(".dashboard-container");
-let editingOrderId = null; 
+let editingOrderId = null;
 
 /* CONFIG PANEL */
-function openConfig(){ document.getElementById("configPanel").style.display="block"; }
-function closeConfigPanel(){ document.getElementById("configPanel").style.display="none"; }
+function openConfig(){
+  document.getElementById("configPanel").style.display="block";
+}
+function closeConfigPanel(){
+  document.getElementById("configPanel").style.display="none";
+}
 
 /* ORDER FORM */
-function openOrderForm(order = null){ 
-  document.getElementById("orderForm").style.display="block"; 
+function openOrderForm(order = null){
+  document.getElementById("orderForm").style.display="block";
+  document.querySelector(".validation-msg").style.display = "none";
+
   if(order){
     document.getElementById("firstName").value = order.firstName;
     document.getElementById("lastName").value = order.lastName;
@@ -24,8 +30,8 @@ function openOrderForm(order = null){
   }
 }
 
-function closeOrderForm(){ 
-  document.getElementById("orderForm").style.display="none"; 
+function closeOrderForm(){
+  document.getElementById("orderForm").style.display="none";
   clearOrderForm();
 }
 
@@ -48,16 +54,21 @@ async function loadOrders(){
 
 /* ADD / UPDATE ORDER */
 async function submitOrder(){
-  const orderData = {
-    firstName: document.getElementById("firstName").value,
-    lastName: document.getElementById("lastName").value,
-    product: document.getElementById("product").value,
-    quantity: Number(document.getElementById("quantity").value),
-    unitPrice: Number(document.getElementById("unitPrice").value),
-    totalAmount: Number(document.getElementById("totalAmount").value)
-  };
+  const firstName = document.getElementById("firstName").value.trim();
+  const lastName = document.getElementById("lastName").value.trim();
+  const product = document.getElementById("product").value;
+  const quantity = Number(document.getElementById("quantity").value);
+  const unitPrice = Number(document.getElementById("unitPrice").value);
+  const totalAmount = Number(document.getElementById("totalAmount").value);
 
-  if(editingOrderId){ 
+  if(!firstName || !lastName || !product || !quantity || !unitPrice){
+    document.querySelector(".validation-msg").style.display="block";
+    return;
+  }
+
+  const orderData = { firstName, lastName, product, quantity, unitPrice, totalAmount };
+
+  if(editingOrderId){
     await fetch(`${API_URL}/${editingOrderId}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -77,7 +88,7 @@ async function submitOrder(){
 }
 
 /* CLEAR FORM */
-function clearOrderForm(){ 
+function clearOrderForm(){
   document.getElementById("firstName").value = "";
   document.getElementById("lastName").value = "";
   document.getElementById("product").value = "";
@@ -86,6 +97,7 @@ function clearOrderForm(){
   document.getElementById("totalAmount").value = "";
   editingOrderId = null;
   document.querySelector("#orderForm button.submit-btn").innerText = "Submit";
+  document.querySelector(".validation-msg").style.display="none";
 }
 
 /* DELETE ORDER */
@@ -105,12 +117,15 @@ async function editOrder(id){
 /* DRAG WIDGETS */
 function enableDrag(){
   const widgets = document.querySelectorAll(".widget");
-  const container = document.querySelector(".dashboard-container");
+  const container = dashboardContainer;
   let drag = null;
+
   widgets.forEach(w => {
     w.addEventListener("dragstart", () => { drag = w; });
     w.addEventListener("dragover", e => e.preventDefault());
-    w.addEventListener("drop", () => { container.insertBefore(drag, w); });
+    w.addEventListener("drop", () => {
+      container.insertBefore(drag, w);
+    });
   });
 }
 
@@ -129,13 +144,20 @@ async function updateTable(){
   const tbody = tableDiv.querySelector("tbody");
   const orders = await loadOrders();
 
-  if(orders.length === 0){
+  const filterInput = tableDiv.querySelector(".table-filter input");
+  let filteredOrders = orders;
+  if(filterInput && filterInput.value.trim()){
+    const searchVal = filterInput.value.toLowerCase();
+    filteredOrders = orders.filter(o => o.product.toLowerCase().includes(searchVal));
+  }
+
+  if(filteredOrders.length === 0){
     tbody.innerHTML = "<tr><td colspan='7'>No Orders Found</td></tr>";
     return;
   }
 
   tbody.innerHTML = "";
-  orders.forEach((o, i) => {
+  filteredOrders.forEach((o, i) => {
     const row = document.createElement("tr");
     row.innerHTML = `
       <td>${i+1}</td>
@@ -151,6 +173,11 @@ async function updateTable(){
     `;
     tbody.appendChild(row);
   });
+}
+
+/* Filter */
+function applyFilter(input){
+  updateTable();
 }
 
 /* UPDATE KPI WIDGETS */
@@ -208,13 +235,15 @@ function addChart(type){
     }
 
     const chart = new Chart(document.getElementById(id), {
-      type: type,
+      type: type==="area"?"line":type,
       data: {
         labels: labels,
         datasets: [{
           label: type==="scatter"?"Quantity vs Total":"Quantity Sold",
           data: data,
-          backgroundColor: "rgba(75,192,192,0.6)"
+          backgroundColor: "rgba(75,192,192,0.6)",
+          borderColor: "rgba(75,192,192,1)",
+          fill: type==="area"?true:false
         }]
       },
       options: { responsive:true, scales: type==="scatter" ? {
