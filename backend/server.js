@@ -1,32 +1,73 @@
 const express = require("express");
 const cors = require("cors");
-const bodyParser = require("body-parser");
+
 const app = express();
 
+/* MIDDLEWARE */
 app.use(cors());
-app.use(bodyParser.json());
+app.use(express.json());
 
+/* IN-MEMORY DATABASE */
 let orders = [];
 
-app.get("/orders", (req,res)=>{ res.json(orders); });
-
-app.post("/orders", (req,res)=>{
-  const order={id:Date.now(),...req.body};
-  orders.push(order);
-  res.json(order);
+/* ================= GET ALL ORDERS ================= */
+app.get("/orders", (req, res) => {
+  res.json(orders);
 });
 
-app.put("/orders/:id",(req,res)=>{
-  const idx = orders.findIndex(o=>o.id==req.params.id);
-  if(idx!==-1) orders[idx]={...orders[idx],...req.body};
-  res.json(orders[idx]);
+/* ================= ADD ORDER ================= */
+app.post("/orders", (req, res) => {
+  const newOrder = {
+    id: Date.now(),
+    firstName: req.body.firstName,
+    lastName: req.body.lastName,
+    product: req.body.product,
+    quantity: req.body.quantity,
+    unitPrice: req.body.unitPrice,
+    totalAmount: req.body.totalAmount
+  };
+
+  orders.push(newOrder);
+
+  res.status(201).json(newOrder);
 });
 
-app.delete("/orders/:id",(req,res)=>{
-  orders=orders.filter(o=>o.id!=req.params.id);
-  res.json({message:"Deleted"});
+/* ================= UPDATE ORDER ================= */
+app.put("/orders/:id", (req, res) => {
+  const id = Number(req.params.id);
+
+  const index = orders.findIndex(order => order.id === id);
+
+  if (index === -1) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  orders[index] = {
+    ...orders[index],
+    ...req.body
+  };
+
+  res.json(orders[index]);
 });
 
-// ✅ IMPORTANT FIX HERE
+/* ================= DELETE ORDER ================= */
+app.delete("/orders/:id", (req, res) => {
+  const id = Number(req.params.id);
+
+  const exists = orders.some(order => order.id === id);
+
+  if (!exists) {
+    return res.status(404).json({ message: "Order not found" });
+  }
+
+  orders = orders.filter(order => order.id !== id);
+
+  res.json({ message: "Order deleted successfully" });
+});
+
+/* ================= SERVER ================= */
 const PORT = process.env.PORT || 5000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+});
