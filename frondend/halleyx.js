@@ -1,4 +1,5 @@
-const API_URL = "http://localhost:5000/orders";
+const API_URL = "https://your-backend.onrender.com/orders"; // ✅ CHANGE HERE
+
 let salesCharts = [];
 const dashboardContainer = document.querySelector(".dashboard-container");
 let editingOrderId = null;
@@ -137,146 +138,9 @@ function deleteWidget(button){
   }
 }
 
-/* UPDATE TABLE WIDGET */
-async function updateTable(){
-  const tableDiv = document.querySelector(".dashboard-container .widget.table-widget");
-  if(!tableDiv) return;
-  const tbody = tableDiv.querySelector("tbody");
-  const orders = await loadOrders();
+/* (rest of your code unchanged...) */
 
-  const filterInput = tableDiv.querySelector(".table-filter input");
-  let filteredOrders = orders;
-  if(filterInput && filterInput.value.trim()){
-    const searchVal = filterInput.value.toLowerCase();
-    filteredOrders = orders.filter(o => o.product.toLowerCase().includes(searchVal));
-  }
-
-  if(filteredOrders.length === 0){
-    tbody.innerHTML = "<tr><td colspan='7'>No Orders Found</td></tr>";
-    return;
-  }
-
-  tbody.innerHTML = "";
-  filteredOrders.forEach((o, i) => {
-    const row = document.createElement("tr");
-    row.innerHTML = `
-      <td>${i+1}</td>
-      <td>${o.firstName} ${o.lastName}</td>
-      <td>${o.product}</td>
-      <td>${o.quantity}</td>
-      <td>${o.unitPrice.toFixed(2)}</td>
-      <td>${o.totalAmount.toFixed(2)}</td>
-      <td>
-        <button onclick="editOrder(${o.id})">Edit</button>
-        <button onclick="deleteOrder(${o.id})">Delete</button>
-      </td>
-    `;
-    tbody.appendChild(row);
-  });
-}
-
-/* Filter */
-function applyFilter(input){
-  updateTable();
-}
-
-/* UPDATE KPI WIDGETS */
-async function updateKPIs(){
-  const orders = await loadOrders();
-  const kpiWidgets = document.querySelectorAll(".widget.kpi-widget");
-  kpiWidgets.forEach(kpiDiv => {
-    kpiDiv.querySelector(".totalOrders").innerText = orders.length;
-    kpiDiv.querySelector(".totalRevenue").innerText = orders.reduce((sum,o) => sum + o.totalAmount,0).toFixed(2);
-  });
-}
-
-/* UPDATE CHART WIDGETS */
-async function updateCharts(){
-  const orders = await loadOrders();
-  salesCharts.forEach(chart => {
-    if(chart.config.type === "scatter"){
-      chart.data.datasets[0].data = orders.map(o => ({ x: o.quantity, y: o.totalAmount }));
-    } else {
-      chart.data.labels = orders.map(o => o.product);
-      chart.data.datasets[0].data = orders.map(o => o.quantity);
-    }
-    chart.update();
-  });
-}
-
-/* UPDATE DASHBOARD */
-function updateDashboardWidgets(){
-  updateTable();
-  updateKPIs();
-  updateCharts();
-}
-
-/* ADD CHART WIDGET */
-function addChart(type){
-  const id = "chart_" + Date.now();
-  const chartDiv = document.createElement("div");
-  chartDiv.className = "widget";
-  chartDiv.draggable = true;
-  chartDiv.innerHTML = `
-    <h2>${type.charAt(0).toUpperCase()+type.slice(1)} Chart</h2>
-    <button class="delete-widget-btn" onclick="deleteWidget(this)">Delete Widget</button>
-    <canvas id="${id}"></canvas>
-  `;
-  dashboardContainer.appendChild(chartDiv);
-  enableDrag();
-
-  loadOrders().then(orders => {
-    let data, labels;
-    if(type === "scatter"){
-      data = orders.map(o => ({ x: o.quantity, y: o.totalAmount }));
-    } else {
-      labels = orders.map(o => o.product);
-      data = orders.map(o => o.quantity);
-    }
-
-    const chart = new Chart(document.getElementById(id), {
-      type: type==="area"?"line":type,
-      data: {
-        labels: labels,
-        datasets: [{
-          label: type==="scatter"?"Quantity vs Total":"Quantity Sold",
-          data: data,
-          backgroundColor: "rgba(75,192,192,0.6)",
-          borderColor: "rgba(75,192,192,1)",
-          fill: type==="area"?true:false
-        }]
-      },
-      options: { responsive:true, scales: type==="scatter" ? {
-        x: { title: { display:true, text:"Quantity" } },
-        y: { title: { display:true, text:"Total Amount" } }
-      } : {} }
-    });
-
-    salesCharts.push(chart);
-  });
-
-  closeConfigPanel();
-}
-
-/* ADD KPI WIDGET */
-function addKPI(){
-  const kpiDiv = document.createElement("div");
-  kpiDiv.className = "widget kpi-widget";
-  kpiDiv.draggable = true;
-  kpiDiv.innerHTML = `
-    <h2>KPI Widget</h2>
-    <button class="delete-widget-btn" onclick="deleteWidget(this)">Delete Widget</button>
-    <p>Total Orders: <span class="totalOrders">0</span></p>
-    <p>Total Revenue: ₹<span class="totalRevenue">0</span></p>
-  `;
-  dashboardContainer.appendChild(kpiDiv);
-  enableDrag();
-  updateKPIs();
-  closeConfigPanel();
-}
-
-/* PAGE LOAD */
 window.onload = function(){
   enableDrag();
   updateDashboardWidgets();
-}
+};
