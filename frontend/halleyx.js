@@ -1,4 +1,4 @@
-const API_URL = "https://dashboard-project-1817.onrender.com";
+const API_URL = "https://dashboard-project-181718.onrender.com/orders";
 
 let salesCharts = [];
 let dashboardContainer;
@@ -112,6 +112,11 @@ function injectGridCSS() {
       min-width:0;
       box-sizing:border-box;
       position:relative;
+    }
+    .widget canvas{
+      width:100% !important;
+      height:280px !important;
+      display:block;
     }
     @media(max-width:1023px){
       .dashboard-container{ --grid-cols:8; }
@@ -248,7 +253,11 @@ function validateForm() {
 async function loadOrders() {
   try {
     const res = await fetch(API_URL);
-    if (!res.ok) throw new Error("Failed to fetch orders");
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch orders. Status: ${res.status}`);
+    }
+
     const data = await res.json();
     cachedOrders = Array.isArray(data) ? data.map(normalizeOrder) : [];
     return cachedOrders;
@@ -278,6 +287,8 @@ async function submitOrder() {
     });
 
     if (!res.ok) {
+      const errText = await res.text();
+      console.error("submitOrder response error:", errText);
       throw new Error(isEdit ? "Failed to update order" : "Failed to create order");
     }
 
@@ -303,7 +314,12 @@ async function deleteOrder(id) {
 
   try {
     const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
-    if (!res.ok) throw new Error("Failed to delete order");
+
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("deleteOrder response error:", errText);
+      throw new Error("Failed to delete order");
+    }
 
     await updateDashboardWidgets();
   } catch (error) {
@@ -465,7 +481,9 @@ function createChart(canvas, type) {
   applyChartDefaults();
   const orders = cachedOrders || [];
 
-  if (canvas.chartInstance) canvas.chartInstance.destroy();
+  if (canvas.chartInstance) {
+    canvas.chartInstance.destroy();
+  }
 
   const ctx = canvas.getContext("2d");
   const p = CHART_PALETTES;
@@ -554,7 +572,10 @@ function createChart(canvas, type) {
     const pal = p.scatter;
     datasets = [{
       label: "Sales",
-      data: orders.map(o => ({ x: Number(o.quantity || 0), y: Number(o.totalAmount || 0) })),
+      data: orders.map(o => ({
+        x: Number(o.quantity || 0),
+        y: Number(o.totalAmount || 0)
+      })),
       backgroundColor: pal.pointColor,
       borderColor: pal.pointBorder,
       hoverBackgroundColor: pal.pointHoverColor,
@@ -576,7 +597,7 @@ function createChart(canvas, type) {
     };
   }
 
-  canvas.chartInstance = new Chart(canvas, {
+  const config = {
     type: chartType,
     data: {
       labels: type === "scatter" ? undefined : labels,
@@ -596,14 +617,27 @@ function createChart(canvas, type) {
       },
       scales: Object.keys(scalesCfg).length ? scalesCfg : undefined
     }
-  });
+  };
 
-  salesCharts.push(canvas.chartInstance);
+  const chartInstance = new Chart(canvas, config);
+  chartInstance.customType = type;
+  canvas.chartInstance = chartInstance;
+  salesCharts.push(chartInstance);
 }
 
 function updateCharts(orders) {
+  salesCharts = salesCharts.filter(chart => {
+    if (!chart || !chart.canvas || !document.body.contains(chart.canvas)) {
+      if (chart) chart.destroy();
+      return false;
+    }
+    return true;
+  });
+
   salesCharts.forEach(chart => {
-    if (chart.config.type === "scatter") {
+    const type = chart.customType || chart.config.type;
+
+    if (type === "scatter") {
       chart.data.datasets[0].data = orders.map(o => ({
         x: Number(o.quantity || 0),
         y: Number(o.totalAmount || 0)
@@ -612,6 +646,7 @@ function updateCharts(orders) {
       chart.data.labels = orders.map(o => o.product);
       chart.data.datasets[0].data = orders.map(o => Number(o.totalAmount || 0));
     }
+
     chart.update();
   });
 }
@@ -684,7 +719,16 @@ function enableDrag() {
 /* ── DELETE WIDGET ──────────────────────────────────────── */
 function deleteWidget(btn) {
   const widget = btn.closest(".widget");
-  if (widget) widget.remove();
+  if (!widget) return;
+
+  const canvas = widget.querySelector("canvas");
+  if (canvas && canvas.chartInstance) {
+    const chart = canvas.chartInstance;
+    chart.destroy();
+    salesCharts = salesCharts.filter(c => c !== chart);
+  }
+
+  widget.remove();
 }
 
 /* ── RESIZE WIDGET ──────────────────────────────────────── */
