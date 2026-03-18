@@ -1,375 +1,378 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Custom Dashboard Builder</title>
-<link rel="stylesheet" href="halleyx.css">
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Custom Dashboard Builder</title>
+  <link rel="stylesheet" href="halleyx.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<style>
-/* ── EXTENDED POPUP FORM ─────────────────────── */
-.popup {
-  width: min(94vw, 620px) !important;
-}
+  <style>
+    .popup {
+      width: min(94vw, 620px) !important;
+    }
 
-.form-section {
-  margin-bottom: 20px;
-}
+    .form-section {
+      margin-bottom: 20px;
+    }
 
-.form-section-title {
-  font-family: 'Syne', sans-serif;
-  font-size: 0.72rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-secondary);
-  padding: 7px 10px;
-  background: var(--surface-3);
-  border-left: 3px solid var(--accent);
-  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
-  margin-bottom: 12px;
-}
+    .form-section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: 0.72rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--text-secondary);
+      padding: 7px 10px;
+      background: var(--surface-3);
+      border-left: 3px solid var(--accent);
+      border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+      margin-bottom: 12px;
+    }
 
-.form-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
+    .form-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+    }
 
-.form-grid .full-width {
-  grid-column: 1 / -1;
-}
+    .form-grid .full-width {
+      grid-column: 1 / -1;
+    }
 
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+    .form-field {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
 
-.form-field label {
-  font-size: 0.78rem;
-  font-weight: 500;
-  color: var(--text-secondary);
-  letter-spacing: 0.2px;
-}
+    .form-field label {
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      letter-spacing: 0.2px;
+    }
 
-.form-field label .req {
-  color: var(--danger);
-  margin-left: 2px;
-}
+    .form-field label .req {
+      color: var(--danger);
+      margin-left: 2px;
+    }
 
-.form-field input,
-.form-field select {
-  width: 100%;
-  padding: 9px 12px;
-  margin: 0;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  font-family: 'DM Sans', sans-serif;
-  font-size: max(16px, 0.875rem);
-  color: var(--text-primary);
-  background: var(--surface-2);
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
-}
+    .form-field input,
+    .form-field select {
+      width: 100%;
+      padding: 9px 12px;
+      margin: 0;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-family: 'DM Sans', sans-serif;
+      font-size: max(16px, 0.875rem);
+      color: var(--text-primary);
+      background: var(--surface-2);
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      box-sizing: border-box;
+    }
 
-.form-field input:focus,
-.form-field select:focus {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 3px var(--accent-glow);
-}
+    .form-field input:focus,
+    .form-field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
 
-.form-field input[readonly] {
-  background: var(--surface-3);
-  cursor: not-allowed;
-  font-weight: 600;
-  color: var(--brand);
-}
+    .form-field input[readonly] {
+      background: var(--surface-3);
+      cursor: not-allowed;
+      font-weight: 600;
+      color: var(--brand);
+    }
 
-.currency-wrapper {
-  position: relative;
-}
+    .currency-wrapper {
+      position: relative;
+    }
 
-.currency-wrapper .currency-symbol {
-  position: absolute;
-  left: 11px;
-  top: 50%;
-  transform: translateY(-50%);
-  color: var(--text-secondary);
-  font-weight: 600;
-  font-size: 0.9rem;
-  pointer-events: none;
-}
+    .currency-wrapper .currency-symbol {
+      position: absolute;
+      left: 11px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--text-secondary);
+      font-weight: 600;
+      font-size: 0.9rem;
+      pointer-events: none;
+    }
 
-.currency-wrapper input {
-  padding-left: 26px !important;
-}
+    .currency-wrapper input {
+      padding-left: 26px !important;
+    }
 
-.field-error {
-  font-size: 0.72rem;
-  color: var(--danger);
-  min-height: 16px;
-  display: none;
-}
+    .field-error {
+      font-size: 0.72rem;
+      color: var(--danger);
+      min-height: 16px;
+      display: none;
+    }
 
-.form-field.has-error input,
-.form-field.has-error select {
-  border-color: var(--danger);
-  box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
-}
+    .form-field.has-error input,
+    .form-field.has-error select {
+      border-color: var(--danger);
+      box-shadow: 0 0 0 3px rgba(239,68,68,0.12);
+    }
 
-.form-field.has-error .field-error {
-  display: block;
-}
+    .form-field.has-error .field-error {
+      display: block;
+    }
 
-/* Status badge colors in table */
-.badge {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: 20px;
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-}
-.badge-pending    { background:#fef3c7; color:#92400e; }
-.badge-inprogress { background:#dbeafe; color:#1e40af; }
-.badge-completed  { background:#d1fae5; color:#065f46; }
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 0.74rem;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+    }
 
-@media (max-width: 540px) {
-  .form-grid { grid-template-columns: 1fr; }
-  .form-grid .full-width { grid-column: 1; }
-}
-</style>
+    .badge-pending { background: #fef3c7; color: #92400e; }
+    .badge-inprogress { background: #dbeafe; color: #1e40af; }
+    .badge-completed { background: #d1fae5; color: #065f46; }
+
+    @media (max-width: 540px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-grid .full-width {
+        grid-column: 1;
+      }
+    }
+  </style>
 </head>
 <body>
-<div class="container">
+  <div class="container">
 
-  <!-- Action Button -->
-  <div style="margin-bottom:15px;">
-    <button onclick="openOrderForm()">＋ Create Order</button>
-  </div>
-
-  <!-- Header -->
-  <div class="header">
-    <div class="header-left">
-      <div class="icon">▦</div>
-      <div>
-        <h2>Custom Dashboard Builder</h2>
-        <p>Create personalized dashboards with drag-and-drop widgets</p>
-      </div>
+    <div style="margin-bottom:15px;">
+      <button type="button" onclick="openOrderForm()">＋ Create Order</button>
     </div>
-    <button class="config-btn" onclick="openConfig()">⚙ Configure Dashboard</button>
-  </div>
 
-  <!-- Dashboard Container -->
-  <div class="dashboard-container">
-    <!-- Table Widget -->
-    <div class="widget table-widget" draggable="true" data-widget-type="table">
-      <h3>Orders Table</h3>
-      <button class="delete-widget-btn" onclick="deleteWidget(this)">✕</button>
-      <div class="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>S.No</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Phone</th>
-              <th>City</th>
-              <th>Country</th>
-              <th>Product</th>
-              <th>Qty</th>
-              <th>Unit Price</th>
-              <th>Total</th>
-              <th>Status</th>
-              <th>Created By</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-        <div class="table-pagination"></div>
-      </div>
-      <div class="table-filter">
-        <input type="text" placeholder="🔍  Search orders…" oninput="applyFilter(this)">
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ══════════════════════════════════════════
-     ORDER FORM POPUP
-══════════════════════════════════════════ -->
-<div id="orderForm" class="popup" style="display:none;">
-  <h2 id="formTitle">Create Order</h2>
-
-  <!-- CUSTOMER INFORMATION -->
-  <div class="form-section">
-    <div class="form-section-title">Customer Information</div>
-    <div class="form-grid">
-
-      <div class="form-field" id="field-firstName">
-        <label>First Name <span class="req">*</span></label>
-        <input id="firstName" type="text" placeholder="e.g. John">
-        <span class="field-error">First name is required</span>
-      </div>
-
-      <div class="form-field" id="field-lastName">
-        <label>Last Name <span class="req">*</span></label>
-        <input id="lastName" type="text" placeholder="e.g. Smith">
-        <span class="field-error">Last name is required</span>
-      </div>
-
-      <div class="form-field" id="field-email">
-        <label>Email ID <span class="req">*</span></label>
-        <input id="email" type="email" placeholder="e.g. john@email.com">
-        <span class="field-error">Valid email is required</span>
-      </div>
-
-      <div class="form-field" id="field-phone">
-        <label>Phone Number <span class="req">*</span></label>
-        <input id="phone" type="tel" placeholder="e.g. +1 555 0100">
-        <span class="field-error">Phone number is required</span>
-      </div>
-
-      <div class="form-field full-width" id="field-streetAddress">
-        <label>Street Address <span class="req">*</span></label>
-        <input id="streetAddress" type="text" placeholder="e.g. 123 Main Street">
-        <span class="field-error">Street address is required</span>
-      </div>
-
-      <div class="form-field" id="field-city">
-        <label>City <span class="req">*</span></label>
-        <input id="city" type="text" placeholder="e.g. New York">
-        <span class="field-error">City is required</span>
-      </div>
-
-      <div class="form-field" id="field-state">
-        <label>State / Province <span class="req">*</span></label>
-        <input id="state" type="text" placeholder="e.g. New York">
-        <span class="field-error">State / Province is required</span>
-      </div>
-
-      <div class="form-field" id="field-postalCode">
-        <label>Postal Code <span class="req">*</span></label>
-        <input id="postalCode" type="text" placeholder="e.g. 10001">
-        <span class="field-error">Postal code is required</span>
-      </div>
-
-      <div class="form-field" id="field-country">
-        <label>Country <span class="req">*</span></label>
-        <select id="country">
-          <option value="">— Select Country —</option>
-          <option>United States</option>
-          <option>Canada</option>
-          <option>Australia</option>
-          <option>Singapore</option>
-          <option>Hong Kong</option>
-        </select>
-        <span class="field-error">Country is required</span>
-      </div>
-
-    </div>
-  </div>
-
-  <!-- ORDER INFORMATION -->
-  <div class="form-section">
-    <div class="form-section-title">Order Information</div>
-    <div class="form-grid">
-
-      <div class="form-field full-width" id="field-product">
-        <label>Choose Product <span class="req">*</span></label>
-        <select id="product" onchange="calculateTotal()">
-          <option value="">— Select Product —</option>
-          <option>Fiber Internet 300 Mbps</option>
-          <option>5G Unlimited Mobile Plan</option>
-          <option>Fiber Internet 1 Gbps</option>
-          <option>Business Internet 500 Mbps</option>
-          <option>VoIP Corporate Package</option>
-        </select>
-        <span class="field-error">Product is required</span>
-      </div>
-
-      <div class="form-field" id="field-quantity">
-        <label>Quantity <span class="req">*</span></label>
-        <input id="quantity" type="number" value="1" min="1" oninput="enforceMinQty(this); calculateTotal()">
-        <span class="field-error">Quantity must be at least 1</span>
-      </div>
-
-      <div class="form-field" id="field-unitPrice">
-        <label>Unit Price <span class="req">*</span></label>
-        <div class="currency-wrapper">
-          <span class="currency-symbol">$</span>
-          <input id="unitPrice" type="number" min="0" step="0.01" placeholder="0.00" oninput="calculateTotal()">
-        </div>
-        <span class="field-error">Unit price is required</span>
-      </div>
-
-      <div class="form-field" id="field-totalAmount">
-        <label>Total Amount</label>
-        <div class="currency-wrapper">
-          <span class="currency-symbol">$</span>
-          <input id="totalAmount" type="text" placeholder="0.00" readonly>
+    <div class="header">
+      <div class="header-left">
+        <div class="icon">▦</div>
+        <div>
+          <h2>Custom Dashboard Builder</h2>
+          <p>Create personalized dashboards with drag-and-drop widgets</p>
         </div>
       </div>
+      <button type="button" class="config-btn" onclick="openConfig()">⚙ Configure Dashboard</button>
+    </div>
 
-      <div class="form-field" id="field-status">
-        <label>Status <span class="req">*</span></label>
-        <select id="status">
-          <option value="Pending" selected>Pending</option>
-          <option value="In Progress">In Progress</option>
-          <option value="Completed">Completed</option>
-        </select>
-        <span class="field-error">Status is required</span>
+    <div class="dashboard-container">
+      <div class="widget table-widget" draggable="true" data-widget-type="table">
+        <h3>Orders Table</h3>
+        <button type="button" class="delete-widget-btn" onclick="deleteWidget(this)">✕</button>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>S.No</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Phone</th>
+                <th>City</th>
+                <th>Country</th>
+                <th>Product</th>
+                <th>Qty</th>
+                <th>Unit Price</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Created By</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="ordersTableBody"></tbody>
+          </table>
+          <div class="table-pagination"></div>
+        </div>
+
+        <div class="table-filter">
+          <input type="text" placeholder="🔍 Search orders…" oninput="applyFilter(this)">
+        </div>
       </div>
-
-      <div class="form-field" id="field-createdBy">
-        <label>Created By <span class="req">*</span></label>
-        <select id="createdBy">
-          <option value="">— Select —</option>
-          <option>Mr. Michael Harris</option>
-          <option>Mr. Ryan Cooper</option>
-          <option>Ms. Olivia Carter</option>
-          <option>Mr. Lucas Martin</option>
-        </select>
-        <span class="field-error">Created by is required</span>
-      </div>
-
     </div>
   </div>
 
-  <div class="popup-actions">
-    <button type="button" onclick="closeOrderForm()" style="background:var(--surface-3);color:var(--text-primary);border:1px solid var(--border);">Cancel</button>
-    <button type="button" onclick="submitOrder()">Submit Order</button>
-  </div>
-</div>
+  <div id="orderForm" class="popup" style="display:none;">
+    <h2 id="formTitle">Create Order</h2>
 
-<!-- CONFIG PANEL POPUP -->
-<div id="configPanel">
-  <h2>Configure Dashboard</h2>
-  <div>
-    <h3>Charts</h3>
-    <ul>
-      <li><button onclick="addChart('bar')">Bar Chart</button></li>
-      <li><button onclick="addChart('line')">Line Chart</button></li>
-      <li><button onclick="addChart('pie')">Pie Chart</button></li>
-      <li><button onclick="addChart('area')">Area Chart</button></li>
-      <li><button onclick="addChart('scatter')">Scatter Plot</button></li>
-    </ul>
-  </div>
-  <div>
-    <h3>KPIs</h3>
-    <ul>
-      <li><button onclick="addKPI()">KPI Value</button></li>
-    </ul>
-  </div>
-  <div id="widgetConfigPanel"></div>
-  <button onclick="closeConfigPanel()">Close</button>
-</div>
+    <div class="form-section">
+      <div class="form-section-title">Customer Information</div>
+      <div class="form-grid">
 
-<div class="overlay" id="overlay" onclick="closeAll()"></div>
+        <div class="form-field" id="field-firstName">
+          <label>First Name <span class="req">*</span></label>
+          <input id="firstName" type="text" placeholder="e.g. John">
+          <span class="field-error">First name is required</span>
+        </div>
 
-<script src="halleyx.js"></script>
+        <div class="form-field" id="field-lastName">
+          <label>Last Name <span class="req">*</span></label>
+          <input id="lastName" type="text" placeholder="e.g. Smith">
+          <span class="field-error">Last name is required</span>
+        </div>
+
+        <div class="form-field" id="field-email">
+          <label>Email ID <span class="req">*</span></label>
+          <input id="email" type="email" placeholder="e.g. john@email.com">
+          <span class="field-error">Valid email is required</span>
+        </div>
+
+        <div class="form-field" id="field-phone">
+          <label>Phone Number <span class="req">*</span></label>
+          <input id="phone" type="tel" placeholder="e.g. +1 555 0100">
+          <span class="field-error">Phone number is required</span>
+        </div>
+
+        <div class="form-field full-width" id="field-streetAddress">
+          <label>Street Address <span class="req">*</span></label>
+          <input id="streetAddress" type="text" placeholder="e.g. 123 Main Street">
+          <span class="field-error">Street address is required</span>
+        </div>
+
+        <div class="form-field" id="field-city">
+          <label>City <span class="req">*</span></label>
+          <input id="city" type="text" placeholder="e.g. New York">
+          <span class="field-error">City is required</span>
+        </div>
+
+        <div class="form-field" id="field-state">
+          <label>State / Province <span class="req">*</span></label>
+          <input id="state" type="text" placeholder="e.g. New York">
+          <span class="field-error">State / Province is required</span>
+        </div>
+
+        <div class="form-field" id="field-postalCode">
+          <label>Postal Code <span class="req">*</span></label>
+          <input id="postalCode" type="text" placeholder="e.g. 10001">
+          <span class="field-error">Postal code is required</span>
+        </div>
+
+        <div class="form-field" id="field-country">
+          <label>Country <span class="req">*</span></label>
+          <select id="country">
+            <option value="">— Select Country —</option>
+            <option value="United States">United States</option>
+            <option value="Canada">Canada</option>
+            <option value="Australia">Australia</option>
+            <option value="Singapore">Singapore</option>
+            <option value="Hong Kong">Hong Kong</option>
+          </select>
+          <span class="field-error">Country is required</span>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="form-section">
+      <div class="form-section-title">Order Information</div>
+      <div class="form-grid">
+
+        <div class="form-field full-width" id="field-product">
+          <label>Choose Product <span class="req">*</span></label>
+          <select id="product" onchange="calculateTotal()">
+            <option value="">— Select Product —</option>
+            <option value="Fiber Internet 300 Mbps">Fiber Internet 300 Mbps</option>
+            <option value="5G Unlimited Mobile Plan">5G Unlimited Mobile Plan</option>
+            <option value="Fiber Internet 1 Gbps">Fiber Internet 1 Gbps</option>
+            <option value="Business Internet 500 Mbps">Business Internet 500 Mbps</option>
+            <option value="VoIP Corporate Package">VoIP Corporate Package</option>
+          </select>
+          <span class="field-error">Product is required</span>
+        </div>
+
+        <div class="form-field" id="field-quantity">
+          <label>Quantity <span class="req">*</span></label>
+          <input id="quantity" type="number" value="1" min="1" oninput="enforceMinQty(this); calculateTotal()">
+          <span class="field-error">Quantity must be at least 1</span>
+        </div>
+
+        <div class="form-field" id="field-unitPrice">
+          <label>Unit Price <span class="req">*</span></label>
+          <div class="currency-wrapper">
+            <span class="currency-symbol">$</span>
+            <input id="unitPrice" type="number" min="0" step="0.01" placeholder="0.00" oninput="calculateTotal()">
+          </div>
+          <span class="field-error">Unit price is required</span>
+        </div>
+
+        <div class="form-field" id="field-totalAmount">
+          <label>Total Amount</label>
+          <div class="currency-wrapper">
+            <span class="currency-symbol">$</span>
+            <input id="totalAmount" type="text" placeholder="0.00" readonly>
+          </div>
+        </div>
+
+        <div class="form-field" id="field-status">
+          <label>Status <span class="req">*</span></label>
+          <select id="status">
+            <option value="Pending" selected>Pending</option>
+            <option value="In Progress">In Progress</option>
+            <option value="Completed">Completed</option>
+          </select>
+          <span class="field-error">Status is required</span>
+        </div>
+
+        <div class="form-field" id="field-createdBy">
+          <label>Created By <span class="req">*</span></label>
+          <select id="createdBy">
+            <option value="">— Select —</option>
+            <option value="Mr. Michael Harris">Mr. Michael Harris</option>
+            <option value="Mr. Ryan Cooper">Mr. Ryan Cooper</option>
+            <option value="Ms. Olivia Carter">Ms. Olivia Carter</option>
+            <option value="Mr. Lucas Martin">Mr. Lucas Martin</option>
+          </select>
+          <span class="field-error">Created by is required</span>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="popup-actions">
+      <button
+        type="button"
+        onclick="closeOrderForm()"
+        style="background:var(--surface-3);color:var(--text-primary);border:1px solid var(--border);"
+      >
+        Cancel
+      </button>
+      <button type="button" onclick="submitOrder()">Submit Order</button>
+    </div>
+  </div>
+
+  <div id="configPanel">
+    <h2>Configure Dashboard</h2>
+    <div>
+      <h3>Charts</h3>
+      <ul>
+        <li><button type="button" onclick="addChart('bar')">Bar Chart</button></li>
+        <li><button type="button" onclick="addChart('line')">Line Chart</button></li>
+        <li><button type="button" onclick="addChart('pie')">Pie Chart</button></li>
+        <li><button type="button" onclick="addChart('area')">Area Chart</button></li>
+        <li><button type="button" onclick="addChart('scatter')">Scatter Plot</button></li>
+      </ul>
+    </div>
+    <div>
+      <h3>KPIs</h3>
+      <ul>
+        <li><button type="button" onclick="addKPI()">KPI Value</button></li>
+      </ul>
+    </div>
+    <div id="widgetConfigPanel"></div>
+    <button type="button" onclick="closeConfigPanel()">Close</button>
+  </div>
+
+  <div class="overlay" id="overlay" onclick="closeAll()"></div>
+
+  <script src="halleyx.js"></script>
 </body>
 </html>
