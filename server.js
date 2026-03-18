@@ -1,95 +1,51 @@
-require("dotenv").config();
-
 const express = require("express");
 const cors = require("cors");
-const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 
-/* ✅ Check env variables */
-if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
-  console.error("Missing Supabase environment variables");
-  process.exit(1);
-}
+let orders = [];
+let nextId = 1;
 
-/* ✅ Supabase client */
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SECRET_KEY
-);
-
-/* ================= ROOT ================= */
 app.get("/", (req, res) => {
   res.send("Backend running successfully");
 });
 
-/* ================= GET ALL ORDERS ================= */
-app.get("/orders", async (req, res) => {
-  try {
-    const { data, error } = await supabase
-      .from("orders")
-      .select("*")
-      .order("order_date", { ascending: false });
-
-    if (error) {
-      console.error("GET /orders error:", error);
-      return res.status(500).json({
-        message: "Failed to fetch orders",
-        error: error.message
-      });
-    }
-
-    res.json(data || []);
-  } catch (err) {
-    console.error("GET SERVER ERROR:", err);
-    res.status(500).json({
-      message: "Server error",
-      error: err.message
-    });
-  }
+app.get("/orders", (req, res) => {
+  const sortedOrders = [...orders].sort(
+    (a, b) => new Date(b.order_date) - new Date(a.order_date)
+  );
+  res.json(sortedOrders);
 });
 
-/* ================= ADD ORDER ================= */
-app.post("/orders", async (req, res) => {
+app.post("/orders", (req, res) => {
   try {
     const body = req.body;
 
-    const payload = {
-      first_name: body.firstName,
-      last_name: body.lastName,
-      email: body.email,
-      phone: body.phone,
-      street_address: body.streetAddress,
-      city: body.city,
-      state: body.state,
-      postal_code: body.postalCode,
-      country: body.country,
-      product: body.product,
-      quantity: Number(body.quantity),
-      unit_price: Number(body.unitPrice),
-      total_amount: Number(body.totalAmount),
+    const newOrder = {
+      id: nextId++,
+      first_name: body.firstName || "",
+      last_name: body.lastName || "",
+      email: body.email || "",
+      phone: body.phone || "",
+      street_address: body.streetAddress || "",
+      city: body.city || "",
+      state: body.state || "",
+      postal_code: body.postalCode || "",
+      country: body.country || "",
+      product: body.product || "",
+      quantity: Number(body.quantity) || 0,
+      unit_price: Number(body.unitPrice) || 0,
+      total_amount: Number(body.totalAmount) || 0,
       status: body.status || "Pending",
-      created_by: body.createdBy
+      created_by: body.createdBy || "",
+      order_date: new Date().toISOString()
     };
 
-    const { data, error } = await supabase
-      .from("orders")
-      .insert([payload])
-      .select()
-      .single();
-
-    if (error) {
-      console.error("POST /orders error:", error);
-      return res.status(500).json({
-        message: "Insert failed",
-        error: error.message
-      });
-    }
-
-    res.status(201).json(data);
+    orders.unshift(newOrder);
+    res.status(201).json(newOrder);
   } catch (err) {
     console.error("POST SERVER ERROR:", err);
     res.status(500).json({
@@ -99,46 +55,37 @@ app.post("/orders", async (req, res) => {
   }
 });
 
-/* ================= UPDATE ORDER ================= */
-app.put("/orders/:id", async (req, res) => {
+app.put("/orders/:id", (req, res) => {
   try {
-    const id = req.params.id;
+    const id = Number(req.params.id);
     const body = req.body;
 
-    const payload = {
-      first_name: body.firstName,
-      last_name: body.lastName,
-      email: body.email,
-      phone: body.phone,
-      street_address: body.streetAddress,
-      city: body.city,
-      state: body.state,
-      postal_code: body.postalCode,
-      country: body.country,
-      product: body.product,
-      quantity: Number(body.quantity),
-      unit_price: Number(body.unitPrice),
-      total_amount: Number(body.totalAmount),
-      status: body.status || "Pending",
-      created_by: body.createdBy
-    };
+    const index = orders.findIndex(order => order.id === id);
 
-    const { data, error } = await supabase
-      .from("orders")
-      .update(payload)
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (error) {
-      console.error("PUT /orders/:id error:", error);
-      return res.status(500).json({
-        message: "Update failed",
-        error: error.message
-      });
+    if (index === -1) {
+      return res.status(404).json({ message: "Order not found" });
     }
 
-    res.json(data);
+    orders[index] = {
+      ...orders[index],
+      first_name: body.firstName || "",
+      last_name: body.lastName || "",
+      email: body.email || "",
+      phone: body.phone || "",
+      street_address: body.streetAddress || "",
+      city: body.city || "",
+      state: body.state || "",
+      postal_code: body.postalCode || "",
+      country: body.country || "",
+      product: body.product || "",
+      quantity: Number(body.quantity) || 0,
+      unit_price: Number(body.unitPrice) || 0,
+      total_amount: Number(body.totalAmount) || 0,
+      status: body.status || "Pending",
+      created_by: body.createdBy || ""
+    };
+
+    res.json(orders[index]);
   } catch (err) {
     console.error("UPDATE SERVER ERROR:", err);
     res.status(500).json({
@@ -148,24 +95,16 @@ app.put("/orders/:id", async (req, res) => {
   }
 });
 
-/* ================= DELETE ORDER ================= */
-app.delete("/orders/:id", async (req, res) => {
+app.delete("/orders/:id", (req, res) => {
   try {
-    const id = req.params.id;
+    const id = Number(req.params.id);
+    const index = orders.findIndex(order => order.id === id);
 
-    const { error } = await supabase
-      .from("orders")
-      .delete()
-      .eq("id", id);
-
-    if (error) {
-      console.error("DELETE /orders/:id error:", error);
-      return res.status(500).json({
-        message: "Delete failed",
-        error: error.message
-      });
+    if (index === -1) {
+      return res.status(404).json({ message: "Order not found" });
     }
 
+    orders.splice(index, 1);
     res.json({ message: "Deleted successfully" });
   } catch (err) {
     console.error("DELETE SERVER ERROR:", err);
@@ -176,7 +115,6 @@ app.delete("/orders/:id", async (req, res) => {
   }
 });
 
-/* ================= SERVER ================= */
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

@@ -1,4 +1,4 @@
-const API_URL = "https://dashboard-backend.onrender.com/orders";
+const API_URL = "https://dashboard-project-1817.onrender.com";
 
 let salesCharts = [];
 let dashboardContainer;
