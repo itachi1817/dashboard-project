@@ -9,15 +9,22 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-/* 🔥 DEBUG (VERY IMPORTANT) */
-console.log("SUPABASE_URL:", process.env.SUPABASE_URL);
-console.log("SECRET KEY LOADED:", !!process.env.SUPABASE_SECRET_KEY);
+/* ✅ Check env variables */
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SECRET_KEY) {
+  console.error("Missing Supabase environment variables");
+  process.exit(1);
+}
 
-/* ✅ USE SECRET KEY (NOT PUBLISHABLE) */
+/* ✅ Supabase client */
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SECRET_KEY
 );
+
+/* ================= ROOT ================= */
+app.get("/", (req, res) => {
+  res.send("Backend running successfully");
+});
 
 /* ================= GET ALL ORDERS ================= */
 app.get("/orders", async (req, res) => {
@@ -27,10 +34,8 @@ app.get("/orders", async (req, res) => {
       .select("*")
       .order("order_date", { ascending: false });
 
-    console.log("GET DATA:", data);
-    console.log("GET ERROR:", error);
-
     if (error) {
+      console.error("GET /orders error:", error);
       return res.status(500).json({
         message: "Failed to fetch orders",
         error: error.message
@@ -52,8 +57,6 @@ app.post("/orders", async (req, res) => {
   try {
     const body = req.body;
 
-    console.log("REQ BODY:", body);
-
     const payload = {
       first_name: body.firstName,
       last_name: body.lastName,
@@ -72,18 +75,14 @@ app.post("/orders", async (req, res) => {
       created_by: body.createdBy
     };
 
-    console.log("POST PAYLOAD:", payload);
-
     const { data, error } = await supabase
       .from("orders")
       .insert([payload])
       .select()
       .single();
 
-    console.log("POST DATA:", data);
-    console.log("POST ERROR:", error);
-
     if (error) {
+      console.error("POST /orders error:", error);
       return res.status(500).json({
         message: "Insert failed",
         error: error.message
@@ -100,7 +99,7 @@ app.post("/orders", async (req, res) => {
   }
 });
 
-/* ================= UPDATE ================= */
+/* ================= UPDATE ORDER ================= */
 app.put("/orders/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -131,9 +130,8 @@ app.put("/orders/:id", async (req, res) => {
       .select()
       .single();
 
-    console.log("UPDATE ERROR:", error);
-
     if (error) {
+      console.error("PUT /orders/:id error:", error);
       return res.status(500).json({
         message: "Update failed",
         error: error.message
@@ -150,7 +148,7 @@ app.put("/orders/:id", async (req, res) => {
   }
 });
 
-/* ================= DELETE ================= */
+/* ================= DELETE ORDER ================= */
 app.delete("/orders/:id", async (req, res) => {
   try {
     const id = req.params.id;
@@ -160,9 +158,8 @@ app.delete("/orders/:id", async (req, res) => {
       .delete()
       .eq("id", id);
 
-    console.log("DELETE ERROR:", error);
-
     if (error) {
+      console.error("DELETE /orders/:id error:", error);
       return res.status(500).json({
         message: "Delete failed",
         error: error.message
