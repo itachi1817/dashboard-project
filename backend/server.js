@@ -1,73 +1,126 @@
 const express = require("express");
 const cors = require("cors");
+const { createClient } = require("@supabase/supabase-js");
 
 const app = express();
 
-/* MIDDLEWARE */
 app.use(cors());
 app.use(express.json());
 
-/* IN-MEMORY DATABASE */
-let orders = [];
+const supabase = createClient(
+  "https://vpolifrhxhscpyynoyil.supabase.co",
+  "sb_publishable_91q_F8NWQwykbXZ-L89Dkw_Ve6CnvWj"
+);
 
 /* ================= GET ALL ORDERS ================= */
-app.get("/orders", (req, res) => {
-  res.json(orders);
+app.get("/orders", async (req, res) => {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("*")
+    .order("order_date", { ascending: false });
+
+  if (error) {
+    console.error("GET /orders error:", error);
+    return res.status(500).json({ message: "Failed to fetch orders" });
+  }
+
+  res.json(data);
 });
 
 /* ================= ADD ORDER ================= */
-app.post("/orders", (req, res) => {
-  const newOrder = {
-    id: Date.now(),
-    firstName: req.body.firstName,
-    lastName: req.body.lastName,
-    product: req.body.product,
-    quantity: req.body.quantity,
-    unitPrice: req.body.unitPrice,
-    totalAmount: req.body.totalAmount
+app.post("/orders", async (req, res) => {
+  const body = req.body;
+
+  const payload = {
+    first_name: body.firstName,
+    last_name: body.lastName,
+    email: body.email,
+    phone: body.phone,
+    street_address: body.streetAddress,
+    city: body.city,
+    state: body.state,
+    postal_code: body.postalCode,
+    country: body.country,
+    product: body.product,
+    quantity: Number(body.quantity),
+    unit_price: Number(body.unitPrice),
+    total_amount: Number(body.totalAmount),
+    status: body.status || "Pending",
+    created_by: body.createdBy
   };
 
-  orders.push(newOrder);
+  const { data, error } = await supabase
+    .from("orders")
+    .insert([payload])
+    .select()
+    .single();
 
-  res.status(201).json(newOrder);
+  if (error) {
+    console.error("POST /orders error:", error);
+    return res.status(500).json({ message: "Failed to create order" });
+  }
+
+  res.status(201).json(data);
 });
 
 /* ================= UPDATE ORDER ================= */
-app.put("/orders/:id", (req, res) => {
-  const id = Number(req.params.id);
+app.put("/orders/:id", async (req, res) => {
+  const id = req.params.id;
+  const body = req.body;
 
-  const index = orders.findIndex(order => order.id === id);
-
-  if (index === -1) {
-    return res.status(404).json({ message: "Order not found" });
-  }
-
-  orders[index] = {
-    ...orders[index],
-    ...req.body
+  const payload = {
+    first_name: body.firstName,
+    last_name: body.lastName,
+    email: body.email,
+    phone: body.phone,
+    street_address: body.streetAddress,
+    city: body.city,
+    state: body.state,
+    postal_code: body.postalCode,
+    country: body.country,
+    product: body.product,
+    quantity: Number(body.quantity),
+    unit_price: Number(body.unitPrice),
+    total_amount: Number(body.totalAmount),
+    status: body.status,
+    created_by: body.createdBy
   };
 
-  res.json(orders[index]);
+  const { data, error } = await supabase
+    .from("orders")
+    .update(payload)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    console.error("PUT /orders/:id error:", error);
+    return res.status(500).json({ message: "Failed to update order" });
+  }
+
+  res.json(data);
 });
 
 /* ================= DELETE ORDER ================= */
-app.delete("/orders/:id", (req, res) => {
-  const id = Number(req.params.id);
+app.delete("/orders/:id", async (req, res) => {
+  const id = req.params.id;
 
-  const exists = orders.some(order => order.id === id);
+  const { error } = await supabase
+    .from("orders")
+    .delete()
+    .eq("id", id);
 
-  if (!exists) {
-    return res.status(404).json({ message: "Order not found" });
+  if (error) {
+    console.error("DELETE /orders/:id error:", error);
+    return res.status(500).json({ message: "Failed to delete order" });
   }
-
-  orders = orders.filter(order => order.id !== id);
 
   res.json({ message: "Order deleted successfully" });
 });
 
 /* ================= SERVER ================= */
-const PORT = process.env.PORT || 5000;
+const PORT = 5000;
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });

@@ -1,172 +1,241 @@
-const API_URL = "https://your-backend-url.onrender.com/orders";
+const API_URL = "http://localhost:5000/orders";
 
-let salesCharts      = [];
+let salesCharts = [];
 let dashboardContainer;
-let editingOrderId   = null;
-let cachedOrders     = null;
+let editingOrderId = null;
+let cachedOrders = [];
 
 /* ═══════════════════════════════════════════════════════════
    RESPONSIVE GRID CONFIG
    ═══════════════════════════════════════════════════════════ */
-const GRID_COLS  = { desktop: 12, tablet: 8, mobile: 4 };
+const GRID_COLS = { desktop: 12, tablet: 8, mobile: 4 };
 const SIZE_SPANS = {
-  small:  { desktop: 3,  tablet: 4, mobile: 4 },
-  medium: { desktop: 6,  tablet: 8, mobile: 4 },
-  large:  { desktop: 12, tablet: 8, mobile: 4 }
+  small: { desktop: 3, tablet: 4, mobile: 4 },
+  medium: { desktop: 6, tablet: 8, mobile: 4 },
+  large: { desktop: 12, tablet: 8, mobile: 4 }
 };
 
-function getBreakpoint(){
+function getBreakpoint() {
   const w = window.innerWidth;
-  if(w >= 1024) return "desktop";
-  if(w >= 640)  return "tablet";
+  if (w >= 1024) return "desktop";
+  if (w >= 640) return "tablet";
   return "mobile";
 }
 
-function applyGridLayout(){
-  const bp   = getBreakpoint();
+function applyGridLayout() {
+  if (!dashboardContainer) return;
+  const bp = getBreakpoint();
   const cols = GRID_COLS[bp];
   dashboardContainer.style.setProperty("--grid-cols", cols);
+
   dashboardContainer.querySelectorAll(".widget").forEach(widget => {
     const spans = widget._spans || SIZE_SPANS.medium;
     widget.style.setProperty("--widget-span", Math.min(spans[bp], cols));
   });
 }
 
-function setWidgetSpans(widget, sizeLabel){
+function setWidgetSpans(widget, sizeLabel) {
   widget._spans = SIZE_SPANS[sizeLabel] || SIZE_SPANS.medium;
   applyGridLayout();
 }
 
+/* ── HELPERS ─────────────────────────────────────────────── */
+function normalizeOrder(order) {
+  return {
+    id: order.id,
+    firstName: order.firstName ?? order.first_name ?? "",
+    lastName: order.lastName ?? order.last_name ?? "",
+    email: order.email ?? "",
+    phone: order.phone ?? "",
+    streetAddress: order.streetAddress ?? order.street_address ?? "",
+    city: order.city ?? "",
+    state: order.state ?? "",
+    postalCode: order.postalCode ?? order.postal_code ?? "",
+    country: order.country ?? "",
+    product: order.product ?? "",
+    quantity: Number(order.quantity ?? 0),
+    unitPrice: Number(order.unitPrice ?? order.unit_price ?? 0),
+    totalAmount: Number(order.totalAmount ?? order.total_amount ?? 0),
+    status: order.status ?? "Pending",
+    createdBy: order.createdBy ?? order.created_by ?? "",
+    orderDate: order.orderDate ?? order.order_date ?? ""
+  };
+}
+
+function getOrderPayloadFromForm() {
+  return {
+    firstName: document.getElementById("firstName").value.trim(),
+    lastName: document.getElementById("lastName").value.trim(),
+    email: document.getElementById("email").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    streetAddress: document.getElementById("streetAddress").value.trim(),
+    city: document.getElementById("city").value.trim(),
+    state: document.getElementById("state").value.trim(),
+    postalCode: document.getElementById("postalCode").value.trim(),
+    country: document.getElementById("country").value,
+    product: document.getElementById("product").value,
+    quantity: Number(document.getElementById("quantity").value),
+    unitPrice: Number(document.getElementById("unitPrice").value),
+    totalAmount: Number(document.getElementById("totalAmount").value),
+    status: document.getElementById("status").value,
+    createdBy: document.getElementById("createdBy").value
+  };
+}
+
+function showMessage(msg) {
+  console.log(msg);
+}
+
 /* ── INIT ───────────────────────────────────────────────── */
-window.onload = function(){
+window.onload = async function () {
   dashboardContainer = document.querySelector(".dashboard-container");
   injectGridCSS();
   enableDrag();
-  updateDashboardWidgets();
   window.addEventListener("resize", applyGridLayout);
+  await updateDashboardWidgets();
 };
 
-function injectGridCSS(){
-  if(document.getElementById("grid-style")) return;
+function injectGridCSS() {
+  if (document.getElementById("grid-style")) return;
+
   const s = document.createElement("style");
   s.id = "grid-style";
   s.textContent = `
     .dashboard-container{
       display:grid;
       grid-template-columns:repeat(var(--grid-cols,12),1fr);
-      gap:20px; padding:20px;
+      gap:20px;
+      padding:20px;
     }
-    .widget{ grid-column:span var(--widget-span,6); min-width:0; box-sizing:border-box; }
-    @media(max-width:1023px){ .dashboard-container{ --grid-cols:8; } }
-    @media(max-width:639px){  .dashboard-container{ --grid-cols:4; } }
+    .widget{
+      grid-column:span var(--widget-span,6);
+      min-width:0;
+      box-sizing:border-box;
+      position:relative;
+    }
+    @media(max-width:1023px){
+      .dashboard-container{ --grid-cols:8; }
+    }
+    @media(max-width:639px){
+      .dashboard-container{ --grid-cols:4; }
+    }
   `;
   document.head.appendChild(s);
 }
 
 /* ── CONFIG ─────────────────────────────────────────────── */
-function openConfig(){
+function openConfig() {
   document.getElementById("configPanel").style.display = "block";
-  document.getElementById("overlay").style.display     = "block";
-}
-function closeConfigPanel(){
-  document.getElementById("configPanel").style.display = "none";
-  document.getElementById("overlay").style.display     = "none";
+  document.getElementById("overlay").style.display = "block";
 }
 
-function closeAll(){
+function closeConfigPanel() {
+  document.getElementById("configPanel").style.display = "none";
+  document.getElementById("overlay").style.display = "none";
+}
+
+function closeAll() {
   closeConfigPanel();
   closeOrderForm();
 }
 
 /* ── ORDER FORM ─────────────────────────────────────────── */
-function openOrderForm(order = null){
+function openOrderForm(order = null) {
   const form = document.getElementById("orderForm");
   form.style.display = "block";
   document.getElementById("overlay").style.display = "block";
   document.getElementById("formTitle").textContent = order ? "Edit Order" : "Create Order";
 
-  if(order){
-    document.getElementById("firstName").value    = order.firstName    || "";
-    document.getElementById("lastName").value     = order.lastName     || "";
-    document.getElementById("email").value        = order.email        || "";
-    document.getElementById("phone").value        = order.phone        || "";
-    document.getElementById("streetAddress").value= order.streetAddress|| "";
-    document.getElementById("city").value         = order.city         || "";
-    document.getElementById("state").value        = order.state        || "";
-    document.getElementById("postalCode").value   = order.postalCode   || "";
-    document.getElementById("country").value      = order.country      || "";
-    document.getElementById("product").value      = order.product      || "";
-    document.getElementById("quantity").value     = order.quantity     || 1;
-    document.getElementById("unitPrice").value    = order.unitPrice    || "";
-    document.getElementById("totalAmount").value  = order.totalAmount  || "";
-    document.getElementById("status").value       = order.status       || "Pending";
-    document.getElementById("createdBy").value    = order.createdBy    || "";
-    editingOrderId = order.id;
+  if (order) {
+    const o = normalizeOrder(order);
+
+    document.getElementById("firstName").value = o.firstName;
+    document.getElementById("lastName").value = o.lastName;
+    document.getElementById("email").value = o.email;
+    document.getElementById("phone").value = o.phone;
+    document.getElementById("streetAddress").value = o.streetAddress;
+    document.getElementById("city").value = o.city;
+    document.getElementById("state").value = o.state;
+    document.getElementById("postalCode").value = o.postalCode;
+    document.getElementById("country").value = o.country;
+    document.getElementById("product").value = o.product;
+    document.getElementById("quantity").value = o.quantity || 1;
+    document.getElementById("unitPrice").value = o.unitPrice || "";
+    document.getElementById("totalAmount").value = o.totalAmount || "";
+    document.getElementById("status").value = o.status || "Pending";
+    document.getElementById("createdBy").value = o.createdBy || "";
+
+    editingOrderId = o.id;
   }
 }
 
-function closeOrderForm(){
+function closeOrderForm() {
   document.getElementById("orderForm").style.display = "none";
-  document.getElementById("overlay").style.display   = "none";
+  document.getElementById("overlay").style.display = "none";
   clearForm();
   clearErrors();
 }
 
 /* ── QUANTITY MINIMUM ENFORCEMENT ───────────────────────── */
-function enforceMinQty(input){
-  if(parseInt(input.value) < 1 || input.value === "") input.value = 1;
+function enforceMinQty(input) {
+  if (parseInt(input.value) < 1 || input.value === "") input.value = 1;
 }
 
 /* ── TOTAL CALCULATION ──────────────────────────────────── */
-function calculateTotal(){
-  const qty   = parseFloat(document.getElementById("quantity").value)   || 0;
-  const price = parseFloat(document.getElementById("unitPrice").value)  || 0;
+function calculateTotal() {
+  const qty = parseFloat(document.getElementById("quantity").value) || 0;
+  const price = parseFloat(document.getElementById("unitPrice").value) || 0;
   const total = qty * price;
   document.getElementById("totalAmount").value = total > 0 ? total.toFixed(2) : "";
 }
 
 /* ── VALIDATION ─────────────────────────────────────────── */
-function clearErrors(){
+function clearErrors() {
   document.querySelectorAll(".form-field.has-error").forEach(el => el.classList.remove("has-error"));
 }
 
-function validateForm(){
+function validateForm() {
   clearErrors();
   let valid = true;
 
   const required = [
-    { id: "firstName",     fieldId: "field-firstName" },
-    { id: "lastName",      fieldId: "field-lastName" },
-    { id: "email",         fieldId: "field-email",     emailCheck: true },
-    { id: "phone",         fieldId: "field-phone" },
+    { id: "firstName", fieldId: "field-firstName" },
+    { id: "lastName", fieldId: "field-lastName" },
+    { id: "email", fieldId: "field-email", emailCheck: true },
+    { id: "phone", fieldId: "field-phone" },
     { id: "streetAddress", fieldId: "field-streetAddress" },
-    { id: "city",          fieldId: "field-city" },
-    { id: "state",         fieldId: "field-state" },
-    { id: "postalCode",    fieldId: "field-postalCode" },
-    { id: "country",       fieldId: "field-country" },
-    { id: "product",       fieldId: "field-product" },
-    { id: "quantity",      fieldId: "field-quantity" },
-    { id: "unitPrice",     fieldId: "field-unitPrice" },
-    { id: "status",        fieldId: "field-status" },
-    { id: "createdBy",     fieldId: "field-createdBy" }
+    { id: "city", fieldId: "field-city" },
+    { id: "state", fieldId: "field-state" },
+    { id: "postalCode", fieldId: "field-postalCode" },
+    { id: "country", fieldId: "field-country" },
+    { id: "product", fieldId: "field-product" },
+    { id: "quantity", fieldId: "field-quantity" },
+    { id: "unitPrice", fieldId: "field-unitPrice" },
+    { id: "status", fieldId: "field-status" },
+    { id: "createdBy", fieldId: "field-createdBy" }
   ];
 
   required.forEach(({ id, fieldId, emailCheck }) => {
-    const el    = document.getElementById(id);
+    const el = document.getElementById(id);
     const field = document.getElementById(fieldId);
-    if(!field) return;
+    if (!el || !field) return;
 
     const val = el.value.trim();
     let hasErr = !val;
 
-    if(!hasErr && emailCheck){
+    if (!hasErr && emailCheck) {
       hasErr = !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(val);
     }
-    if(!hasErr && id === "quantity"){
+
+    if (!hasErr && id === "quantity") {
       hasErr = parseInt(val) < 1;
     }
 
-    if(hasErr){
+    if (!hasErr && id === "unitPrice") {
+      hasErr = parseFloat(val) < 0;
+    }
+
+    if (hasErr) {
       field.classList.add("has-error");
       valid = false;
     }
@@ -176,113 +245,104 @@ function validateForm(){
 }
 
 /* ── LOAD ORDERS ────────────────────────────────────────── */
-async function loadOrders(){
-  if(cachedOrders !== null) return cachedOrders;
-  cachedOrders = JSON.parse(localStorage.getItem("orders")) || [];
-  fetch(API_URL)
-    .then(r => r.json())
-    .then(data => {
-      cachedOrders = data;
-      localStorage.setItem("orders", JSON.stringify(data));
-      updateTable(data); updateCharts(data); updateKPI(data);
-    })
-    .catch(()=>{});
-  return cachedOrders;
+async function loadOrders() {
+  try {
+    const res = await fetch(API_URL);
+    if (!res.ok) throw new Error("Failed to fetch orders");
+    const data = await res.json();
+    cachedOrders = Array.isArray(data) ? data.map(normalizeOrder) : [];
+    return cachedOrders;
+  } catch (error) {
+    console.error("loadOrders error:", error);
+    cachedOrders = [];
+    return [];
+  }
 }
 
 /* ── SUBMIT ─────────────────────────────────────────────── */
-function submitOrder(){
-  if(!validateForm()) return;
+async function submitOrder() {
+  if (!validateForm()) return;
 
-  const order = {
-    id:            editingOrderId || Date.now(),
-    firstName:     document.getElementById("firstName").value.trim(),
-    lastName:      document.getElementById("lastName").value.trim(),
-    email:         document.getElementById("email").value.trim(),
-    phone:         document.getElementById("phone").value.trim(),
-    streetAddress: document.getElementById("streetAddress").value.trim(),
-    city:          document.getElementById("city").value.trim(),
-    state:         document.getElementById("state").value.trim(),
-    postalCode:    document.getElementById("postalCode").value.trim(),
-    country:       document.getElementById("country").value,
-    product:       document.getElementById("product").value,
-    quantity:      Number(document.getElementById("quantity").value),
-    unitPrice:     Number(document.getElementById("unitPrice").value),
-    totalAmount:   Number(document.getElementById("totalAmount").value),
-    status:        document.getElementById("status").value,
-    createdBy:     document.getElementById("createdBy").value
-  };
+  calculateTotal();
 
-  let orders = cachedOrders !== null
-    ? [...cachedOrders]
-    : JSON.parse(localStorage.getItem("orders")) || [];
-
+  const order = getOrderPayloadFromForm();
   const isEdit = !!editingOrderId;
-  if(isEdit){
-    orders = orders.map(o => o.id === editingOrderId ? order : o);
-  } else {
-    orders.push(order);
+  const url = isEdit ? `${API_URL}/${editingOrderId}` : API_URL;
+  const method = isEdit ? "PUT" : "POST";
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(order)
+    });
+
+    if (!res.ok) {
+      throw new Error(isEdit ? "Failed to update order" : "Failed to create order");
+    }
+
+    editingOrderId = null;
+    closeOrderForm();
+    await updateDashboardWidgets();
+    showMessage(isEdit ? "Order updated successfully" : "Order created successfully");
+  } catch (error) {
+    console.error("submitOrder error:", error);
+    alert("Unable to save order. Check backend connection.");
   }
-
-  cachedOrders = orders;
-  localStorage.setItem("orders", JSON.stringify(orders));
-  editingOrderId = null;
-
-  closeOrderForm();
-  updateTable(orders); updateCharts(orders); updateKPI(orders);
-
-  fetch(isEdit ? `${API_URL}/${order.id}` : API_URL, {
-    method:  isEdit ? "PUT" : "POST",
-    headers: { "Content-Type":"application/json" },
-    body:    JSON.stringify(order)
-  }).catch(()=>{});
 }
 
-/* ── EDIT ────────────────────────────────────────────────── */
-function editOrder(id){
-  const orders = cachedOrders || JSON.parse(localStorage.getItem("orders")) || [];
-  const order  = orders.find(o => o.id === id);
-  if(order) openOrderForm(order);
+/* ── EDIT ───────────────────────────────────────────────── */
+function editOrder(id) {
+  const order = cachedOrders.find(o => String(o.id) === String(id));
+  if (order) openOrderForm(order);
 }
 
 /* ── DELETE ─────────────────────────────────────────────── */
-function deleteOrder(id){
-  if(!confirm("Delete this order?")) return;
-  let orders = cachedOrders !== null
-    ? [...cachedOrders]
-    : JSON.parse(localStorage.getItem("orders")) || [];
-  orders = orders.filter(o => o.id !== id);
-  cachedOrders = orders;
-  localStorage.setItem("orders", JSON.stringify(orders));
-  updateTable(orders); updateCharts(orders); updateKPI(orders);
-  fetch(`${API_URL}/${id}`,{method:"DELETE"}).catch(()=>{});
+async function deleteOrder(id) {
+  if (!confirm("Delete this order?")) return;
+
+  try {
+    const res = await fetch(`${API_URL}/${id}`, { method: "DELETE" });
+    if (!res.ok) throw new Error("Failed to delete order");
+
+    await updateDashboardWidgets();
+  } catch (error) {
+    console.error("deleteOrder error:", error);
+    alert("Unable to delete order.");
+  }
 }
 
 /* ── MAIN UPDATE ─────────────────────────────────────────── */
-async function updateDashboardWidgets(){
+async function updateDashboardWidgets() {
   const orders = await loadOrders();
-  updateTable(orders); updateCharts(orders); updateKPI(orders);
+  updateTable(orders);
+  updateCharts(orders);
+  updateKPI(orders);
+  applyGridLayout();
 }
 
-/* ── STATUS BADGE ────────────────────────────────────────── */
-function statusBadge(status){
+/* ── STATUS BADGE ───────────────────────────────────────── */
+function statusBadge(status) {
+  const normalized = status === "In progress" ? "In Progress" : status;
   const map = {
-    "Pending":     "badge-pending",
+    "Pending": "badge-pending",
     "In Progress": "badge-inprogress",
-    "Completed":   "badge-completed"
+    "Completed": "badge-completed"
   };
-  const cls = map[status] || "badge-pending";
-  return `<span class="badge ${cls}">${status || "Pending"}</span>`;
+  const cls = map[normalized] || "badge-pending";
+  return `<span class="badge ${cls}">${normalized || "Pending"}</span>`;
 }
 
-/* ── TABLE ───────────────────────────────────────────────── */
-function updateTable(orders){
+/* ── TABLE ──────────────────────────────────────────────── */
+function updateTable(orders) {
   const tbody = document.querySelector("tbody");
-  if(!tbody) return;
-  if(!orders.length){
+  if (!tbody) return;
+
+  if (!orders.length) {
     tbody.innerHTML = `<tr><td colspan="13">No Orders Found</td></tr>`;
     return;
   }
+
   tbody.innerHTML = orders.map((o, i) => `
     <tr>
       <td>${i + 1}</td>
@@ -301,62 +361,77 @@ function updateTable(orders){
         <button onclick="editOrder(${o.id})">Edit</button>
         <button onclick="deleteOrder(${o.id})">Delete</button>
       </td>
-    </tr>`).join("");
+    </tr>
+  `).join("");
 }
 
-/* ── WIDGET BASE ─────────────────────────────────────────── */
-function createWidget(size = "medium"){
+/* ── WIDGET BASE ────────────────────────────────────────── */
+function createWidget(size = "medium") {
   const widget = document.createElement("div");
   widget.classList.add("widget", size);
-  widget.setAttribute("draggable","true");
+  widget.setAttribute("draggable", "true");
   setWidgetSpans(widget, size);
   return widget;
 }
 
-/* ── CHART PALETTES ──────────────────────────────────────── */
+/* ── CHART PALETTES ─────────────────────────────────────── */
 const CHART_PALETTES = {
   bar: {
     backgrounds: [
-      "rgba(180,74,56,0.82)","rgba(205,110,80,0.82)","rgba(220,145,95,0.82)",
-      "rgba(188,98,130,0.82)","rgba(152,90,150,0.82)","rgba(110,82,163,0.82)","rgba(80,96,168,0.82)"
+      "rgba(180,74,56,0.82)", "rgba(205,110,80,0.82)", "rgba(220,145,95,0.82)",
+      "rgba(188,98,130,0.82)", "rgba(152,90,150,0.82)", "rgba(110,82,163,0.82)", "rgba(80,96,168,0.82)"
     ],
-    borders: ["#b44a38","#cd6e50","#dc915f","#bc6282","#985a96","#6a52a3","#5060a8"],
-    gridColor: "rgba(180,74,56,0.07)", tickColor: "#78716c"
+    borders: ["#b44a38", "#cd6e50", "#dc915f", "#bc6282", "#985a96", "#6a52a3", "#5060a8"],
+    gridColor: "rgba(180,74,56,0.07)",
+    tickColor: "#78716c"
   },
   line: {
-    lineColor:"#15803d",pointColor:"#166534",pointHover:"#22c55e",
-    fillColor:"rgba(21,128,61,0.06)",gridColor:"rgba(21,128,61,0.09)",tickColor:"#57534e"
+    lineColor: "#15803d",
+    pointColor: "#166534",
+    pointHover: "#22c55e",
+    fillColor: "rgba(21,128,61,0.06)",
+    gridColor: "rgba(21,128,61,0.09)",
+    tickColor: "#57534e"
   },
   area: {
-    lineColor:"#7c3aed",pointColor:"#6d28d9",pointHover:"#a78bfa",
-    fillStart:"rgba(124,58,237,0.30)",fillEnd:"rgba(124,58,237,0.00)",
-    gridColor:"rgba(124,58,237,0.08)",tickColor:"#57534e"
+    lineColor: "#7c3aed",
+    pointColor: "#6d28d9",
+    pointHover: "#a78bfa",
+    fillStart: "rgba(124,58,237,0.30)",
+    fillEnd: "rgba(124,58,237,0.00)",
+    gridColor: "rgba(124,58,237,0.08)",
+    tickColor: "#57534e"
   },
   pie: {
-    backgrounds:["#1e40af","#065f46","#991b1b","#92400e","#0f766e","#6b21a8","#854d0e"],
-    borders:["#fff","#fff","#fff","#fff","#fff","#fff","#fff"],borderWidth:2.5
+    backgrounds: ["#1e40af", "#065f46", "#991b1b", "#92400e", "#0f766e", "#6b21a8", "#854d0e"],
+    borders: ["#fff", "#fff", "#fff", "#fff", "#fff", "#fff", "#fff"],
+    borderWidth: 2.5
   },
   doughnut: {
-    backgrounds:["#292524","#78350f","#92400e","#a16207","#166534","#1e3a8a","#4c1d95"],
-    borders:["#fff","#fff","#fff","#fff","#fff","#fff","#fff"],borderWidth:2.5
+    backgrounds: ["#292524", "#78350f", "#92400e", "#a16207", "#166534", "#1e3a8a", "#4c1d95"],
+    borders: ["#fff", "#fff", "#fff", "#fff", "#fff", "#fff", "#fff"],
+    borderWidth: 2.5
   },
   scatter: {
-    pointColor:"rgba(194,65,12,0.72)",pointBorder:"#9a3412",
-    pointHoverColor:"rgba(234,88,12,0.90)",gridColor:"rgba(194,65,12,0.08)",tickColor:"#78716c"
+    pointColor: "rgba(194,65,12,0.72)",
+    pointBorder: "#9a3412",
+    pointHoverColor: "rgba(234,88,12,0.90)",
+    gridColor: "rgba(194,65,12,0.08)",
+    tickColor: "#78716c"
   }
 };
 
-function applyChartDefaults(){
-  if(typeof Chart === "undefined" || Chart._defaultsApplied) return;
+function applyChartDefaults() {
+  if (typeof Chart === "undefined" || Chart._defaultsApplied) return;
   Chart.defaults.font.family = "'DM Sans', 'Arial', sans-serif";
-  Chart.defaults.font.size   = 12;
-  Chart.defaults.color       = "#78716c";
+  Chart.defaults.font.size = 12;
+  Chart.defaults.color = "#78716c";
   Chart.defaults.plugins.legend.labels.usePointStyle = true;
-  Chart.defaults.plugins.legend.labels.padding       = 16;
+  Chart.defaults.plugins.legend.labels.padding = 16;
   Chart._defaultsApplied = true;
 }
 
-function makeGradient(ctx, canvas, colorStart, colorEnd){
+function makeGradient(ctx, canvas, colorStart, colorEnd) {
   const g = ctx.createLinearGradient(0, 0, 0, canvas.offsetHeight || 280);
   g.addColorStop(0, colorStart);
   g.addColorStop(1, colorEnd);
@@ -364,12 +439,17 @@ function makeGradient(ctx, canvas, colorStart, colorEnd){
 }
 
 const TOOLTIP_STYLE = {
-  backgroundColor:"#1c1917",titleColor:"#fafaf9",bodyColor:"#a8a29e",
-  borderColor:"#292524",borderWidth:1,padding:11,cornerRadius:8
+  backgroundColor: "#1c1917",
+  titleColor: "#fafaf9",
+  bodyColor: "#a8a29e",
+  borderColor: "#292524",
+  borderWidth: 1,
+  padding: 11,
+  cornerRadius: 8
 };
 
-/* ── ADD CHART WIDGET ────────────────────────────────────── */
-function addChart(type, size = "medium"){
+/* ── ADD CHART WIDGET ───────────────────────────────────── */
+function addChart(type, size = "medium") {
   const widget = createWidget(size);
   widget.innerHTML = `
     <h3>${type.toUpperCase()} Chart</h3>
@@ -378,71 +458,140 @@ function addChart(type, size = "medium"){
   `;
   dashboardContainer.appendChild(widget);
   createChart(widget.querySelector("canvas"), type);
+  applyGridLayout();
 }
 
-function createChart(canvas, type){
+function createChart(canvas, type) {
   applyChartDefaults();
   const orders = cachedOrders || [];
-  if(canvas.chartInstance) canvas.chartInstance.destroy();
 
-  const ctx       = canvas.getContext("2d");
-  const p         = CHART_PALETTES;
-  const labels    = orders.map(o => o.product);
-  const values    = orders.map(o => o.totalAmount);
+  if (canvas.chartInstance) canvas.chartInstance.destroy();
+
+  const ctx = canvas.getContext("2d");
+  const p = CHART_PALETTES;
+  const labels = orders.map(o => o.product);
+  const values = orders.map(o => Number(o.totalAmount || 0));
   const chartType = type === "area" ? "line" : type;
-  let datasets, scalesCfg = {};
 
-  if(type === "bar"){
+  let datasets;
+  let scalesCfg = {};
+
+  if (type === "bar") {
     const pal = p.bar;
-    datasets = [{ label:"Sales", data:values,
-      backgroundColor: values.map((_,i) => pal.backgrounds[i%pal.backgrounds.length]),
-      borderColor:     values.map((_,i) => pal.borders[i%pal.borders.length]),
-      borderWidth:1.5,borderRadius:7,borderSkipped:false }];
-    scalesCfg = { x:{grid:{color:pal.gridColor},ticks:{color:pal.tickColor}}, y:{grid:{color:pal.gridColor},ticks:{color:pal.tickColor}} };
-  } else if(type === "line"){
+    datasets = [{
+      label: "Sales",
+      data: values,
+      backgroundColor: values.map((_, i) => pal.backgrounds[i % pal.backgrounds.length]),
+      borderColor: values.map((_, i) => pal.borders[i % pal.borders.length]),
+      borderWidth: 1.5,
+      borderRadius: 7,
+      borderSkipped: false
+    }];
+    scalesCfg = {
+      x: { grid: { color: pal.gridColor }, ticks: { color: pal.tickColor } },
+      y: { grid: { color: pal.gridColor }, ticks: { color: pal.tickColor } }
+    };
+  } else if (type === "line") {
     const pal = p.line;
-    datasets = [{ label:"Sales", data:values,
-      borderColor:pal.lineColor, backgroundColor:pal.fillColor,
-      pointBackgroundColor:pal.pointColor, pointHoverBackgroundColor:pal.pointHover,
-      pointRadius:4,pointHoverRadius:6,borderWidth:2.5,tension:0.4,fill:false }];
-    scalesCfg = { x:{grid:{color:pal.gridColor},ticks:{color:pal.tickColor}}, y:{grid:{color:pal.gridColor},ticks:{color:pal.tickColor}} };
-  } else if(type === "area"){
+    datasets = [{
+      label: "Sales",
+      data: values,
+      borderColor: pal.lineColor,
+      backgroundColor: pal.fillColor,
+      pointBackgroundColor: pal.pointColor,
+      pointHoverBackgroundColor: pal.pointHover,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      borderWidth: 2.5,
+      tension: 0.4,
+      fill: false
+    }];
+    scalesCfg = {
+      x: { grid: { color: pal.gridColor }, ticks: { color: pal.tickColor } },
+      y: { grid: { color: pal.gridColor }, ticks: { color: pal.tickColor } }
+    };
+  } else if (type === "area") {
     const pal = p.area;
     const grad = makeGradient(ctx, canvas, pal.fillStart, pal.fillEnd);
-    datasets = [{ label:"Sales", data:values,
-      borderColor:pal.lineColor, backgroundColor:grad,
-      pointBackgroundColor:pal.pointColor, pointHoverBackgroundColor:pal.pointHover,
-      pointRadius:4,pointHoverRadius:6,borderWidth:2.5,tension:0.4,fill:true }];
-    scalesCfg = { x:{grid:{color:pal.gridColor},ticks:{color:pal.tickColor}}, y:{grid:{color:pal.gridColor},ticks:{color:pal.tickColor}} };
-  } else if(type === "pie"){
-    const pal = p.pie;
-    datasets = [{ label:"Sales", data:values,
-      backgroundColor:values.map((_,i) => pal.backgrounds[i%pal.backgrounds.length]),
-      borderColor:pal.borders, borderWidth:pal.borderWidth, hoverOffset:7 }];
-  } else if(type === "doughnut"){
-    const pal = p.doughnut;
-    datasets = [{ label:"Sales", data:values,
-      backgroundColor:values.map((_,i) => pal.backgrounds[i%pal.backgrounds.length]),
-      borderColor:pal.borders, borderWidth:pal.borderWidth, hoverOffset:7 }];
-  } else if(type === "scatter"){
-    const pal = p.scatter;
-    datasets = [{ label:"Sales", data:orders.map(o=>({x:o.quantity,y:o.totalAmount})),
-      backgroundColor:pal.pointColor, borderColor:pal.pointBorder,
-      hoverBackgroundColor:pal.pointHoverColor, pointRadius:6,pointHoverRadius:9,borderWidth:1.5 }];
+    datasets = [{
+      label: "Sales",
+      data: values,
+      borderColor: pal.lineColor,
+      backgroundColor: grad,
+      pointBackgroundColor: pal.pointColor,
+      pointHoverBackgroundColor: pal.pointHover,
+      pointRadius: 4,
+      pointHoverRadius: 6,
+      borderWidth: 2.5,
+      tension: 0.4,
+      fill: true
+    }];
     scalesCfg = {
-      x:{title:{display:true,text:"Quantity",color:"#78716c"},grid:{color:pal.gridColor},ticks:{color:pal.tickColor}},
-      y:{title:{display:true,text:"Total",color:"#78716c"},grid:{color:pal.gridColor},ticks:{color:pal.tickColor}}
+      x: { grid: { color: pal.gridColor }, ticks: { color: pal.tickColor } },
+      y: { grid: { color: pal.gridColor }, ticks: { color: pal.tickColor } }
+    };
+  } else if (type === "pie") {
+    const pal = p.pie;
+    datasets = [{
+      label: "Sales",
+      data: values,
+      backgroundColor: values.map((_, i) => pal.backgrounds[i % pal.backgrounds.length]),
+      borderColor: pal.borders,
+      borderWidth: pal.borderWidth,
+      hoverOffset: 7
+    }];
+  } else if (type === "doughnut") {
+    const pal = p.doughnut;
+    datasets = [{
+      label: "Sales",
+      data: values,
+      backgroundColor: values.map((_, i) => pal.backgrounds[i % pal.backgrounds.length]),
+      borderColor: pal.borders,
+      borderWidth: pal.borderWidth,
+      hoverOffset: 7
+    }];
+  } else if (type === "scatter") {
+    const pal = p.scatter;
+    datasets = [{
+      label: "Sales",
+      data: orders.map(o => ({ x: Number(o.quantity || 0), y: Number(o.totalAmount || 0) })),
+      backgroundColor: pal.pointColor,
+      borderColor: pal.pointBorder,
+      hoverBackgroundColor: pal.pointHoverColor,
+      pointRadius: 6,
+      pointHoverRadius: 9,
+      borderWidth: 1.5
+    }];
+    scalesCfg = {
+      x: {
+        title: { display: true, text: "Quantity", color: "#78716c" },
+        grid: { color: pal.gridColor },
+        ticks: { color: pal.tickColor }
+      },
+      y: {
+        title: { display: true, text: "Total", color: "#78716c" },
+        grid: { color: pal.gridColor },
+        ticks: { color: pal.tickColor }
+      }
     };
   }
 
   canvas.chartInstance = new Chart(canvas, {
     type: chartType,
-    data: { labels: type === "scatter" ? undefined : labels, datasets },
+    data: {
+      labels: type === "scatter" ? undefined : labels,
+      datasets
+    },
     options: {
-      responsive:true, maintainAspectRatio:false,
-      animation:{ duration:480, easing:"easeOutQuart" },
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 480, easing: "easeOutQuart" },
       plugins: {
-        legend:{ display:["pie","doughnut"].includes(type), position:"bottom", labels:{padding:14,boxWidth:12} },
+        legend: {
+          display: ["pie", "doughnut"].includes(type),
+          position: "bottom",
+          labels: { padding: 14, boxWidth: 12 }
+        },
         tooltip: TOOLTIP_STYLE
       },
       scales: Object.keys(scalesCfg).length ? scalesCfg : undefined
@@ -452,97 +601,127 @@ function createChart(canvas, type){
   salesCharts.push(canvas.chartInstance);
 }
 
-function updateCharts(orders){
+function updateCharts(orders) {
   salesCharts.forEach(chart => {
-    if(chart.config.type === "scatter"){
-      chart.data.datasets[0].data = orders.map(o => ({ x:o.quantity, y:o.totalAmount }));
+    if (chart.config.type === "scatter") {
+      chart.data.datasets[0].data = orders.map(o => ({
+        x: Number(o.quantity || 0),
+        y: Number(o.totalAmount || 0)
+      }));
     } else {
-      chart.data.labels           = orders.map(o => o.product);
-      chart.data.datasets[0].data = orders.map(o => o.totalAmount);
+      chart.data.labels = orders.map(o => o.product);
+      chart.data.datasets[0].data = orders.map(o => Number(o.totalAmount || 0));
     }
     chart.update();
   });
 }
 
-/* ── KPI ─────────────────────────────────────────────────── */
-function addKPI(size = "small"){
+/* ── KPI ────────────────────────────────────────────────── */
+function addKPI(size = "small") {
   const widget = createWidget(size);
   widget.innerHTML = `
     <h3>Total Revenue</h3>
     <button class="delete-widget-btn" onclick="deleteWidget(this)">✕</button>
-    <h1 class="kpi-value">$ 0</h1>
+    <h1 class="kpi-value">$ 0.00</h1>
   `;
   dashboardContainer.appendChild(widget);
-  const orders = cachedOrders || [];
-  const total  = orders.reduce((s, o) => s + (o.totalAmount || 0), 0);
+
+  const total = cachedOrders.reduce((s, o) => s + Number(o.totalAmount || 0), 0);
   widget.querySelector(".kpi-value").innerText = "$ " + total.toFixed(2);
+
+  applyGridLayout();
 }
 
-function updateKPI(orders){
-  const total = orders.reduce((s, o) => s + (o.totalAmount || 0), 0);
+function updateKPI(orders) {
+  const total = orders.reduce((s, o) => s + Number(o.totalAmount || 0), 0);
   document.querySelectorAll(".kpi-value").forEach(el => {
     el.innerText = "$ " + total.toFixed(2);
   });
 }
 
-/* ── DRAG ────────────────────────────────────────────────── */
-function enableDrag(){
+/* ── DRAG ───────────────────────────────────────────────── */
+function enableDrag() {
   let dragged = null;
+
   dashboardContainer.addEventListener("dragstart", e => {
-    if(e.target.classList.contains("widget")){
+    if (e.target.classList.contains("widget")) {
       dragged = e.target;
       setTimeout(() => e.target.classList.add("dragging"), 0);
     }
   });
+
   dashboardContainer.addEventListener("dragend", e => {
-    e.target.classList.remove("dragging");
+    if (e.target.classList.contains("widget")) {
+      e.target.classList.remove("dragging");
+    }
     dragged = null;
   });
+
   dashboardContainer.addEventListener("dragover", e => {
     e.preventDefault();
     const target = e.target.closest(".widget");
     dashboardContainer.querySelectorAll(".widget").forEach(w => w.classList.remove("drag-over"));
-    if(target && target !== dragged) target.classList.add("drag-over");
+    if (target && target !== dragged) target.classList.add("drag-over");
   });
+
   dashboardContainer.addEventListener("drop", e => {
+    e.preventDefault();
     const target = e.target.closest(".widget");
     dashboardContainer.querySelectorAll(".widget").forEach(w => w.classList.remove("drag-over"));
-    if(target && dragged && target !== dragged){
-      const rect   = target.getBoundingClientRect();
+
+    if (target && dragged && target !== dragged) {
+      const rect = target.getBoundingClientRect();
       const offset = e.clientY - rect.top;
-      offset > rect.height / 2 ? target.after(dragged) : target.before(dragged);
+      if (offset > rect.height / 2) {
+        target.after(dragged);
+      } else {
+        target.before(dragged);
+      }
     }
   });
 }
 
-/* ── DELETE WIDGET ───────────────────────────────────────── */
-function deleteWidget(btn){ btn.closest(".widget").remove(); }
+/* ── DELETE WIDGET ──────────────────────────────────────── */
+function deleteWidget(btn) {
+  const widget = btn.closest(".widget");
+  if (widget) widget.remove();
+}
 
-/* ── RESIZE WIDGET ───────────────────────────────────────── */
-function resizeWidget(widget, newSize){
-  widget.classList.remove("small","medium","large");
+/* ── RESIZE WIDGET ──────────────────────────────────────── */
+function resizeWidget(widget, newSize) {
+  widget.classList.remove("small", "medium", "large");
   widget.classList.add(newSize);
   setWidgetSpans(widget, newSize);
 }
 
-/* ── FILTER ──────────────────────────────────────────────── */
-function applyFilter(input){
+/* ── FILTER ─────────────────────────────────────────────── */
+function applyFilter(input) {
   const val = input.value.toLowerCase();
   document.querySelectorAll("tbody tr").forEach(row => {
     row.style.display = row.innerText.toLowerCase().includes(val) ? "" : "none";
   });
 }
 
-/* ── CLEAR FORM ──────────────────────────────────────────── */
-function clearForm(){
-  ["firstName","lastName","email","phone","streetAddress","city","state",
-   "postalCode","quantity","unitPrice","totalAmount"].forEach(id => {
+/* ── CLEAR FORM ─────────────────────────────────────────── */
+function clearForm() {
+  [
+    "firstName", "lastName", "email", "phone", "streetAddress", "city", "state",
+    "postalCode", "unitPrice", "totalAmount"
+  ].forEach(id => {
     const el = document.getElementById(id);
-    if(el) el.value = id === "quantity" ? "1" : "";
+    if (el) el.value = "";
   });
-  ["country","product","status","createdBy"].forEach(id => {
+
+  const qty = document.getElementById("quantity");
+  if (qty) qty.value = "1";
+
+  const status = document.getElementById("status");
+  if (status) status.value = "Pending";
+
+  ["country", "product", "createdBy"].forEach(id => {
     const el = document.getElementById(id);
-    if(el) el.value = id === "status" ? "Pending" : "";
+    if (el) el.value = "";
   });
+
   editingOrderId = null;
 }
